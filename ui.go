@@ -20,35 +20,44 @@ package main
 
 import "fmt"
 
-//if it looks stupid and works, it ain't stupid
-const clearLine = "\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08"
-
 //UI encapsulates the state of the terminal display.
 type UI struct {
 	task  string
 	step  uint
 	count uint
+
+	prevLen int
+}
+
+func (ui *UI) setLine(line string) {
+	fmt.Printf("\r%-[1]*[2]s", ui.prevLen, line)
+	ui.prevLen = len(line)
+}
+
+func (ui *UI) newLine() {
+	fmt.Printf("\n")
+	ui.prevLen = 0
 }
 
 //ShowError prints the given error if it is not nil.
 func (ui *UI) ShowError(err error) {
 	if err != nil {
 		if ui.task != "" {
-			fmt.Printf("\n")
+			ui.newLine()
 		}
-		fmt.Printf("\x1B[1;31m[error] \x1B[0;31m%s\x1B[0m\n", err.Error())
+		ui.setLine(fmt.Sprintf("\x1B[1;31m[error] \x1B[0;31m%s\x1B[0m\n", err.Error()))
 	}
 }
 
 //ShowWarning prints the given warning.
 func (ui *UI) ShowWarning(msg string, args ...interface{}) {
 	if ui.task != "" {
-		fmt.Printf("\n")
+		ui.newLine()
 	}
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
 	}
-	fmt.Printf("\x1B[1;33m[ warn] \x1B[0;33m%s\x1B[0m\n", msg)
+	ui.setLine(fmt.Sprintf("\x1B[1;33m[ warn] \x1B[0;33m%s\x1B[0m\n", msg))
 }
 
 //SetCurrentTask displays the progress of the next task.
@@ -73,7 +82,7 @@ func (ui *UI) EndTask() {
 	if ui.task != "" {
 		ui.step = ui.count
 		ui.displayTask()
-		fmt.Printf("\n")
+		ui.newLine()
 
 		ui.task = ""
 		ui.step = 0
@@ -82,10 +91,9 @@ func (ui *UI) EndTask() {
 }
 
 func (ui *UI) displayTask() {
-	fmt.Printf(clearLine)
 	progress := "....."
 	if ui.count > 0 {
 		progress = fmt.Sprintf("%2d/%2d", ui.step, ui.count)
 	}
-	fmt.Printf("\x1B[1;36m[%s] \x1B[0;36m%s\x1B[0m ", progress, ui.task)
+	ui.setLine(fmt.Sprintf("\x1B[1;36m[%s] \x1B[0;36m%s\x1B[0m ", progress, ui.task))
 }
